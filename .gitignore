@@ -1,0 +1,19 @@
+# Secrets. The pattern has no slash, so it matches at any depth —
+# backend/.env is covered, as is any .env you add later in a subfolder.
+# .env.* catches .env.local, .env.production and friends; the negation keeps
+# the committed template.
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Local artefacts
+.model-cache/
+.localpg/

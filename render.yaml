@@ -1,0 +1,40 @@
+# Render blueprint: connect the repo at https://dashboard.render.com/blueprints
+# and set DATABASE_URL + API_KEYS in the dashboard (they are marked sync:false
+# so secrets never live in git).
+services:
+  - type: web
+    name: hive-mind-memory
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: >-
+      pip install -r backend/requirements-lite.txt &&
+      python backend/scripts/prefetch_model.py
+    startCommand: uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DATABASE_URL
+        sync: false
+      - key: API_KEYS
+        sync: false
+      # Set to this service's own URL after the first deploy; it becomes the
+      # servers[] entry in openapi.json that ChatGPT Actions requires.
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: EMBEDDING_BACKEND
+        value: fastembed
+      # Keep the model cache inside the build output so it survives to runtime.
+      - key: HF_HOME
+        value: /opt/render/project/src/.model-cache
+      - key: FASTEMBED_CACHE_PATH
+        value: /opt/render/project/src/.model-cache
+      - key: WARM_MODEL_ON_STARTUP
+        value: "true"
+      - key: AUTO_MIGRATE
+        value: "true"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: APP_ENV
+        value: production

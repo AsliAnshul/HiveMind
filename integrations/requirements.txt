@@ -1,0 +1,2 @@
+mcp>=2.0  # the bridge also runs on mcp 1.x
+httpx>=0.27

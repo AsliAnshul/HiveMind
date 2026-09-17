@@ -1,0 +1,4 @@
+# Deploy manifest for zero-config hosts (Render, Railway, Koyeb, Heroku-style
+# buildpacks) that expect requirements.txt in the repository root.
+# Local development: install backend/requirements-dev.txt instead.
+-r backend/requirements-lite.txt
