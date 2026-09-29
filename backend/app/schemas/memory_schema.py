@@ -186,6 +186,7 @@ class DeleteResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: Literal["ok", "degraded"]
     database: bool
+    schema_ready: bool = False
     embedding_model: str
     embedding_backend: str | None
     embedding_dim: int

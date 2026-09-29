@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import lru_cache
@@ -96,6 +97,7 @@ def get_session_factory() -> sessionmaker[Session]:
 
 def get_db() -> Iterator[Session]:
     """FastAPI dependency yielding a transactional session."""
+    ensure_schema_once()
     session = get_session_factory()()
     try:
         yield session
@@ -246,6 +248,42 @@ def pgvector_version() -> tuple[int, ...] | None:
     except ValueError:
         logger.warning("Unrecognised pgvector version %r.", raw)
         return None
+
+
+_schema_ready = False
+_schema_lock = threading.Lock()
+
+
+def schema_is_ready() -> bool:
+    """Whether the schema has been verified at least once this process."""
+    return _schema_ready
+
+
+def ensure_schema_once() -> bool:
+    """Verify the schema if it has not been verified yet. Never raises.
+
+    Called at startup and again before serving each request, so a database that
+    was unreachable at boot — a paused free-tier project, say — is picked up as
+    soon as it comes back, with no redeploy. After the first success this is a
+    boolean check.
+    """
+    global _schema_ready
+    if _schema_ready:
+        return True
+    with _schema_lock:
+        if _schema_ready:
+            return True
+        try:
+            ensure_schema()
+        except SQLAlchemyError as exc:
+            logger.warning(
+                "Schema not verified — the database is unreachable (%s). The "
+                "service will keep running and retry on the next request.",
+                getattr(exc, "orig", exc),
+            )
+            return False
+        _schema_ready = True
+        return True
 
 
 def ping() -> bool:

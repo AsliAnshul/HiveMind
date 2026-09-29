@@ -41,6 +41,22 @@ def test_semantics_beat_keywords(embedder) -> None:
     assert cosine(query, related) > cosine(query, unrelated)
 
 
+def test_many_chunks_encode_without_a_ragged_batch(embedder) -> None:
+    """Regression: batching long chunks raised ValueError inside fastembed.
+
+    A document long enough to need several chunks used to fail with
+    "inhomogeneous shape" — a 500 on any sufficiently long memory, on the
+    backend the deployment actually runs.
+    """
+    long_document = "the deployment pipeline runs on push to main. " * 200
+    chunks = embedder._chunk(long_document)
+    assert len(chunks) > 1, "test needs a document that actually splits"
+
+    vector = embedder.embed(long_document)
+    assert len(vector) == 384
+    assert math.isclose(math.sqrt(sum(v * v for v in vector)), 1.0, rel_tol=1e-4)
+
+
 def test_long_text_is_chunked_not_truncated(embedder) -> None:
     """A fact buried 1 000 words into a document still influences the vector."""
     filler = "the deployment pipeline runs on push to main. " * 120

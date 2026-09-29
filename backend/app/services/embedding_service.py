@@ -62,7 +62,14 @@ class FastEmbedBackend:
         self._model = TextEmbedding(model_name=self._ALIASES.get(model_name, model_name))
 
     def encode(self, texts: list[str]) -> np.ndarray:
-        vectors = np.asarray(list(self._model.embed(texts)), dtype=np.float32)
+        # One document per call. Batching several long texts together trips a
+        # ragged-array error inside fastembed's own tokenisation
+        # ("inhomogeneous shape"), which is exactly what chunking a long memory
+        # produces. A single-document batch cannot be ragged. The cost is a few
+        # milliseconds per chunk, paid only on long documents.
+        vectors = np.asarray(
+            [next(iter(self._model.embed([text]))) for text in texts], dtype=np.float32
+        )
         norms = np.linalg.norm(vectors, axis=1, keepdims=True)
         return vectors / np.clip(norms, 1e-12, None)
 

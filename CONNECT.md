@@ -209,6 +209,8 @@ disagree you can see who said what.
 | ChatGPT: "could not import schema" | Either `PUBLIC_BASE_URL` is unset, so the document has no `servers[]`, or you imported `/openapi.json` (3.1) instead of `/openapi-3.0.json`. |
 | ChatGPT asks you for an "x-api-key" argument | You are on an older deployment where the header was still in the schema. Redeploy. |
 | First call after idle takes ~50 s | Render free tier cold start. See the keep-alive cron in `deploy.md`. |
-| `503 Database unavailable` | Supabase project paused after 7 days idle. Open the dashboard and restore. |
+| `503 Database unavailable` | Supabase project paused after 7 days idle. Open the dashboard and restore; the service recovers by itself, no redeploy. |
+| `FATAL: (ENOTFOUND) tenant/user ... not found` | Same thing seen from the pooler. A paused project loses its DNS, so `db.<ref>.supabase.co` stops resolving while the shared pooler host still does. Restore the project. |
+| `/health` says `"status": "degraded"` | The service is up but the database is not answering. `schema_ready` and `database` in the same response tell you which half is broken. |
 | Works locally, every call times out once deployed | `DATABASE_URL` uses Supabase's direct host (`db.<ref>.supabase.co`), which is IPv6-only. Switch to the session pooler URI. |
 | Claude lists no tools | The MCP server failed to start. Check the deployment logs for `MCP endpoint live at /mcp`. |

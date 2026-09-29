@@ -47,6 +47,12 @@ ChatGPT's Action importer can read).
   setup they are free, and search latency against a database in another region
   dropped from ~1300 ms to ~570 ms. They are applied with autocommit on, so a
   rolled-back transaction cannot quietly revert them.
+- **An unreachable database does not stop the service.** Startup logs a warning
+  and carries on; `/health` reports `degraded` with a `schema_ready` flag, data
+  requests return 503, and the schema is created on the first request after the
+  database answers. Crashing at boot instead would take `/health` and `/mcp`
+  down too, and a free-tier database that pauses weekly would need a manual
+  redeploy each time.
 - **Writes do not re-read their own row.** Timestamps are filled client-side as
   well as by `server_default`, so an insert needs no follow-up `SELECT`.
 - **Two interchangeable embedding backends.** `sentence-transformers` (PyTorch,

@@ -61,9 +61,20 @@ the text itself.
 > host has IPv4. Run `python backend/scripts/check_env.py` before deploying; it
 > checks for exactly this.
 
-Supabase pausing matters for a memory server that sits idle for a week. Either
-keep the free cron in Part 4 pointed at `/health` (any query counts as
-activity), or use Neon, which suspends and resumes transparently instead.
+Supabase pausing matters for a memory server that sits idle for a week, and it
+is not a soft failure: a paused project loses its DNS entirely, so
+`db.<ref>.supabase.co` stops resolving and the shared pooler answers
+`FATAL: (ENOTFOUND) tenant/user ... not found`. Restoring it from the dashboard
+takes about a minute and the data survives.
+
+**Set up the keep-alive cron in Part 4 on day one.** `/health` runs a query, so
+pinging it counts as activity and the project never pauses. The alternative is
+Neon, which suspends and resumes transparently instead of pausing.
+
+The service itself tolerates all of this: if the database is unreachable at
+boot it logs a warning, keeps serving `/health` and `/mcp`, answers data
+requests with 503, and creates the schema on the first request after the
+database comes back — no redeploy.
 
 ---
 

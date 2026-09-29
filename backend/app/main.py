@@ -67,9 +67,20 @@ mcp_app = mcp_server.streamable_http_app(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Verify the schema and warm the embedding model before serving traffic."""
+    """Verify the schema and warm the embedding model before serving traffic.
+
+    A database that is unreachable at boot must not kill the process. Render
+    would report the deploy as failed and take /health and /mcp down with it,
+    and the service could not recover on its own once the database returned —
+    which is exactly what a paused free-tier project causes.
+    """
     if settings.auto_migrate:
-        database.ensure_schema()
+        if not database.ensure_schema_once():
+            logger.warning(
+                "Starting without a verified schema. Requests will return 503 "
+                "until the database answers; the schema is then created "
+                "automatically on the first successful request."
+            )
     else:
         logger.info("AUTO_MIGRATE disabled; assuming the schema already exists.")
 
@@ -262,6 +273,7 @@ def health() -> HealthResponse:
     return HealthResponse(
         status="ok" if database_ok and backend else "degraded",
         database=database_ok,
+        schema_ready=database.schema_is_ready(),
         embedding_model=settings.embedding_model,
         embedding_backend=backend,
         embedding_dim=settings.embedding_dim,
