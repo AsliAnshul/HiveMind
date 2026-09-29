@@ -245,9 +245,8 @@ claude mcp add --transport http hive-mind https://your-app.onrender.com/mcp \
 ```
 
 **ChatGPT** — custom GPT → Action → import
-`https://your-app.onrender.com/openapi-3.0.json` → auth *API Key*, custom
-header `X-API-Key`. (Note the `-3.0`: ChatGPT's importer reads OpenAPI 3.0 and
-FastAPI's `/openapi.json` is 3.1.)
+`https://your-app.onrender.com/openapi.json` → auth *API Key*, custom header
+`X-API-Key`.
 
 Set `PUBLIC_BASE_URL` to the deployment's own URL first. ChatGPT rejects a
 schema without a `servers[]` entry, and the MCP endpoint answers an

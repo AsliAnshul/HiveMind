@@ -183,6 +183,19 @@ class DeleteResponse(BaseModel):
     deleted: int
 
 
+class ServiceBanner(BaseModel):
+    """Response for ``GET /``.
+
+    Declared rather than returned as a bare dict: an untyped object makes
+    OpenAPI consumers warn that the schema has no properties.
+    """
+
+    service: str
+    version: str
+    docs: str
+    endpoints: list[str]
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok", "degraded"]
     database: bool

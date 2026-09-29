@@ -10,14 +10,20 @@ URL = https://your-app.onrender.com
 KEY = the value of API_KEYS from backend/.env
 ```
 
-Two doors into the same database:
+There are two doors into the same database, and which one an assistant uses
+depends only on what it speaks:
 
-| Assistant | Door | What it needs |
+| Door | Who uses it | What it needs |
 | --- | --- | --- |
-| Claude | `URL/mcp` — MCP over HTTP | the URL and the key |
-| ChatGPT | `URL/openapi.json` — GPT Action | the URL and the key |
+| `URL/mcp` — MCP over HTTP | Claude, Gemini CLI, Cursor, anything MCP | the URL and the key |
+| `URL/openapi.json` — OpenAPI 3.1 | ChatGPT custom GPTs | the URL and the key |
 
-Nothing to install on your machine for either one.
+Nothing to install on your machine for either one. Both doors read and write the
+same rows, so it does not matter which assistant wrote a memory.
+
+A note on ChatGPT "plugins": that system was retired. The supported way to give
+ChatGPT a custom API is a **custom GPT with an Action**, which is what this page
+describes.
 
 ---
 
@@ -112,14 +118,14 @@ Requires ChatGPT Plus (custom GPTs are a paid feature).
 2. **Add the action** — *Create new action* → **Import from URL** →
 
    ```
-   https://your-app.onrender.com/openapi-3.0.json
+   https://your-app.onrender.com/openapi.json
    ```
 
-   Note the `-3.0`. FastAPI's `/openapi.json` is OpenAPI **3.1**, and ChatGPT's
-   importer reads **3.0** — it rejects 3.1's `anyOf: [X, {"type": "null"}]`
-   spelling of an optional field. `/openapi-3.0.json` is the same API
-   translated, and both documents are validated against the official schemas by
-   the test suite.
+   ChatGPT validates the declared version and accepts **3.1.0 or 3.1.1** only —
+   `Input should be '3.1.1' or '3.1.0'` is what you get otherwise. FastAPI emits
+   3.1.0, so the plain document is the right one. The test suite asserts the
+   version, validates the document against the official schema, and checks that
+   no response is an untyped object.
 
    Seven operations appear: `write_memory`, `search_memory`, `project_context`,
    `list_memories`, `get_memory`, `delete_memory`, `list_projects`.
@@ -156,6 +162,61 @@ Rules:
 - Never call delete_memory without explicit confirmation from the user.
 - When you use something from memory, say so, including who wrote it and when.
 ```
+
+---
+
+## Google Gemini
+
+Gemini has no single answer, because its three surfaces differ in what they can
+call.
+
+### Gemini CLI — works, and is the easiest
+
+The CLI speaks MCP. Add the server to `~/.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "hive-mind": {
+      "httpUrl": "https://your-app.onrender.com/mcp",
+      "headers": { "X-API-Key": "your-key" },
+      "timeout": 30000
+    }
+  }
+}
+```
+
+Restart the CLI and run `/mcp` to list the tools. If your version rejects
+`httpUrl`, check `gemini mcp --help` for the key it expects — remote MCP
+configuration has changed names between releases, while the server side is
+identical either way.
+
+### Gemini API (your own code) — works
+
+The `google-genai` SDK does function calling, and recent versions accept an MCP
+session directly as a tool. Either way the model ends up calling the same four
+operations. This is the route if you are building something rather than
+chatting.
+
+### The Gemini app and Gems — not possible
+
+Gems customise instructions and files. They cannot call an external API, so
+there is nothing to connect. Use the CLI, or paste context in by hand.
+
+---
+
+## Anything else that speaks MCP
+
+Cursor, Windsurf, Zed, custom agents — the configuration is always the same
+three facts:
+
+```
+transport : streamable HTTP
+url       : https://your-app.onrender.com/mcp
+header    : X-API-Key: your-key      (or Authorization: Bearer your-key)
+```
+
+Both header styles are accepted, because clients differ in which they can send.
 
 ---
 
@@ -206,7 +267,9 @@ disagree you can see who said what.
 | `401 Missing X-API-Key` | Header absent, or the client dropped it on a redirect. Use the exact `URL/mcp`. |
 | `403 Invalid API key` | Key does not match `API_KEYS` on the server. Check for a trailing space. |
 | `421 Invalid Host header` | `PUBLIC_BASE_URL` does not match the URL being called. Fix it and redeploy. |
-| ChatGPT: "could not import schema" | Either `PUBLIC_BASE_URL` is unset, so the document has no `servers[]`, or you imported `/openapi.json` (3.1) instead of `/openapi-3.0.json`. |
+| ChatGPT: `Input should be '3.1.1' or '3.1.0'` | You imported a document declaring another version. Use `/openapi.json`. |
+| ChatGPT: "could not import schema" | `PUBLIC_BASE_URL` is unset, so the document has no `servers[]`. |
+| ChatGPT: "object schema missing properties" | A response is an untyped object. Every response here is a declared model; if you see this, you are on an older deployment — redeploy. |
 | ChatGPT asks you for an "x-api-key" argument | You are on an older deployment where the header was still in the schema. Redeploy. |
 | First call after idle takes ~50 s | Render free tier cold start. See the keep-alive cron in `deploy.md`. |
 | `503 Database unavailable` | Supabase project paused after 7 days idle. Open the dashboard and restore; the service recovers by itself, no redeploy. |

@@ -24,8 +24,7 @@ Docker, no external vector database.
 | `POST /mcp` | The same tools over MCP, for Claude to connect to directly |
 
 Interactive docs at `/docs`, machine-readable schema at `/openapi.json`
-(OpenAPI 3.1) and at `/openapi-3.0.json` (the same API as 3.0.3, which is what
-ChatGPT's Action importer can read).
+(OpenAPI 3.1.0 — the version ChatGPT Actions requires).
 
 ### Design decisions worth knowing
 

@@ -17,10 +17,9 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app import db as database
 from app.mcp_server import build_mcp_server
-from app.openapi_compat import to_openapi_30
 from app.routes import memory as memory_routes
 from app.routes import projects as project_routes
-from app.schemas.memory_schema import HealthResponse
+from app.schemas.memory_schema import HealthResponse, ServiceBanner
 from app.services import memory_service
 from app.services.embedding_service import get_embedder
 from app.utils.config import Settings, get_settings
@@ -215,26 +214,18 @@ async def _database_error(request: Request, exc: SQLAlchemyError) -> JSONRespons
 
 
 @app.get(
-    "/openapi-3.0.json",
-    include_in_schema=False,
-    summary="OpenAPI 3.0.3 schema, for ChatGPT Actions",
+    "/",
+    response_model=ServiceBanner,
+    tags=["meta"],
+    summary="Service banner",
+    operation_id="service_banner",
 )
-def openapi_30() -> dict:
-    """The same API described in OpenAPI 3.0.3.
-
-    ChatGPT's Action importer reads 3.0 and rejects the 3.1 document FastAPI
-    produces. Import this URL into a custom GPT instead of /openapi.json.
-    """
-    return to_openapi_30(app.openapi())
-
-
-@app.get("/", tags=["meta"], summary="Service banner", operation_id="service_banner")
-def root() -> dict:
-    return {
-        "service": settings.app_name,
-        "version": VERSION,
-        "docs": "/docs",
-        "endpoints": [
+def root() -> ServiceBanner:
+    return ServiceBanner(
+        service=settings.app_name,
+        version=VERSION,
+        docs="/docs",
+        endpoints=[
             "POST /memory/write",
             "POST /memory/search",
             "GET /memory",
@@ -242,8 +233,9 @@ def root() -> dict:
             "DELETE /memory/{id}",
             "GET /projects",
             "GET /projects/{project}/context",
+            "POST /mcp",
         ],
-    }
+    )
 
 
 @app.get(
