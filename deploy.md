@@ -85,10 +85,16 @@ The repo already contains `render.yaml`, so Render configures itself:
 3. Set the two secrets it asks for (they are `sync: false`, so they never live
    in git):
    - `DATABASE_URL` — the Supabase session-pooler URI.
-   - `API_KEYS` — generate one with `openssl rand -hex 32`.
-   - `PUBLIC_BASE_URL` — the service's own `https://….onrender.com` URL, which
-     Render shows you after the first deploy. Only ChatGPT Actions needs it;
-     set it and redeploy once.
+   - `API_KEYS` — one or more random strings, comma-separated with no spaces.
+     Generate them with `openssl rand -hex 32`. Issue one per assistant
+     (`claude-key,chatgpt-key`) so either can be revoked alone; both still see
+     all the same rows.
+   - `PUBLIC_BASE_URL` — leave it empty for now. It is the service's own
+     `https://….onrender.com` URL, which Render only shows you once the service
+     exists. Set it in Environment after the first deploy and let Render
+     redeploy. Both assistants need it: ChatGPT refuses to import a schema with
+     no `servers[]` entry, and the MCP endpoint answers an unrecognised `Host`
+     header with 421, so Claude cannot connect without it.
 4. Deploy. The build installs `requirements-lite.txt` and pre-downloads the
    model into `.model-cache` so cold starts do not re-fetch 90 MB of weights.
 5. Verify — locally first if you like, with the same `DATABASE_URL`:
@@ -228,8 +234,9 @@ claude mcp add --transport http hive-mind https://your-app.onrender.com/mcp \
 ```
 
 **ChatGPT** — custom GPT → Action → import
-`https://your-app.onrender.com/openapi.json` → auth *API Key*, custom header
-`X-API-Key`.
+`https://your-app.onrender.com/openapi-3.0.json` → auth *API Key*, custom
+header `X-API-Key`. (Note the `-3.0`: ChatGPT's importer reads OpenAPI 3.0 and
+FastAPI's `/openapi.json` is 3.1.)
 
 Set `PUBLIC_BASE_URL` to the deployment's own URL first. ChatGPT rejects a
 schema without a `servers[]` entry, and the MCP endpoint answers an

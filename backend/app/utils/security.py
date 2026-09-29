@@ -15,8 +15,16 @@ from fastapi import Header, HTTPException, status
 from app.utils.config import get_settings
 
 
-async def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
-    """FastAPI dependency enforcing the ``X-API-Key`` header."""
+async def require_api_key(
+    x_api_key: str | None = Header(default=None, include_in_schema=False),
+) -> None:
+    """FastAPI dependency enforcing the ``X-API-Key`` header.
+
+    ``include_in_schema=False`` keeps the header out of the OpenAPI document.
+    Otherwise it appears as an operation *parameter*, and a ChatGPT Action asks
+    the model to supply the key as a function argument — which it cannot know —
+    instead of letting the Action's own auth configuration send it.
+    """
     settings = get_settings()
     if not settings.auth_enabled:
         return

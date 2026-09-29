@@ -110,11 +110,25 @@ Requires ChatGPT Plus (custom GPTs are a paid feature).
 
 1. **Create the GPT** — ChatGPT → Explore GPTs → **Create** → *Configure*.
 2. **Add the action** — *Create new action* → **Import from URL** →
-   `https://your-app.onrender.com/openapi.json`.
+
+   ```
+   https://your-app.onrender.com/openapi-3.0.json
+   ```
+
+   Note the `-3.0`. FastAPI's `/openapi.json` is OpenAPI **3.1**, and ChatGPT's
+   importer reads **3.0** — it rejects 3.1's `anyOf: [X, {"type": "null"}]`
+   spelling of an optional field. `/openapi-3.0.json` is the same API
+   translated, and both documents are validated against the official schemas by
+   the test suite.
+
    Seven operations appear: `write_memory`, `search_memory`, `project_context`,
    `list_memories`, `get_memory`, `delete_memory`, `list_projects`.
 3. **Authentication** → *API Key* → Auth Type **Custom** → Header name
    `X-API-Key` → paste the key.
+
+   The key must *not* appear as a parameter on any operation — it is hidden from
+   the schema on purpose, so the Action's auth configuration supplies it rather
+   than the model trying to guess it.
 4. **Instructions** — paste the block below into the GPT's *Instructions* field.
    Without it the GPT has the tools but no habit of using them, which is the
    usual reason a setup like this quietly stops being useful.
@@ -192,7 +206,8 @@ disagree you can see who said what.
 | `401 Missing X-API-Key` | Header absent, or the client dropped it on a redirect. Use the exact `URL/mcp`. |
 | `403 Invalid API key` | Key does not match `API_KEYS` on the server. Check for a trailing space. |
 | `421 Invalid Host header` | `PUBLIC_BASE_URL` does not match the URL being called. Fix it and redeploy. |
-| ChatGPT: "could not import schema" | `PUBLIC_BASE_URL` unset, so `openapi.json` has no `servers[]`. |
+| ChatGPT: "could not import schema" | Either `PUBLIC_BASE_URL` is unset, so the document has no `servers[]`, or you imported `/openapi.json` (3.1) instead of `/openapi-3.0.json`. |
+| ChatGPT asks you for an "x-api-key" argument | You are on an older deployment where the header was still in the schema. Redeploy. |
 | First call after idle takes ~50 s | Render free tier cold start. See the keep-alive cron in `deploy.md`. |
 | `503 Database unavailable` | Supabase project paused after 7 days idle. Open the dashboard and restore. |
 | Works locally, every call times out once deployed | `DATABASE_URL` uses Supabase's direct host (`db.<ref>.supabase.co`), which is IPv6-only. Switch to the session pooler URI. |

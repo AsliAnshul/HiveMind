@@ -23,7 +23,9 @@ Docker, no external vector database.
 | `GET /health` | Database + model readiness |
 | `POST /mcp` | The same tools over MCP, for Claude to connect to directly |
 
-Interactive docs at `/docs`, machine-readable schema at `/openapi.json`.
+Interactive docs at `/docs`, machine-readable schema at `/openapi.json`
+(OpenAPI 3.1) and at `/openapi-3.0.json` (the same API as 3.0.3, which is what
+ChatGPT's Action importer can read).
 
 ### Design decisions worth knowing
 
@@ -103,7 +105,7 @@ Only `DATABASE_URL` is required. Everything else has a working default — see
 | `EMBEDDING_BACKEND` | `auto` | `auto` prefers `fastembed`, falls back to `sentence-transformers`. |
 | `AUTO_MIGRATE` | `true` | Creates the extension, table and indexes on startup. |
 | `VECTOR_INDEX_TYPE` | `hnsw` | `ivfflat` is supported too — read the note in §3 first. |
-| `PUBLIC_BASE_URL` | empty | Your deployed URL. Required for ChatGPT Actions — it becomes `servers[]` in `openapi.json`. |
+| `PUBLIC_BASE_URL` | empty | Your deployed URL, no trailing slash. Required by **both** clients: it becomes `servers[]` in `openapi.json` for ChatGPT, and it whitelists the `Host` header for the `/mcp` endpoint Claude connects to. |
 | `CONTEXT_LIMIT` | `10` | Entries returned by the project-context endpoint. |
 
 ---

@@ -247,7 +247,9 @@ def main() -> int:
         report(
             WARN,
             "PUBLIC_BASE_URL not set",
-            "Only ChatGPT Actions needs it. Set it to the deployed URL later.",
+            "Fine locally. Once deployed, set it to the service's own URL: "
+            "ChatGPT will not import openapi.json without a servers[] entry, "
+            "and the /mcp endpoint rejects unknown Host headers with 421.",
         )
 
     print()
